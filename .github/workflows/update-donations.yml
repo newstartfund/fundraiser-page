@@ -35,8 +35,8 @@ jobs:
           api_key = os.environ["TRONGRID_API_KEY"]
           
           if not api_key.strip():
-    raise RuntimeError("TRONGRID_API_KEY is empty")
-print("API key is present:", bool(api_key.strip()))
+            raise RuntimeError("TRONGRID_API_KEY is empty")
+          print("API key is present:", bool(api_key.strip()))
 
           contract = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
 
