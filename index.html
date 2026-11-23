@@ -20,8 +20,30 @@ section{margin-top:26px} footer{font-size:13px;color:#69717d;margin-top:26px}
 <p><button onclick="navigator.clipboard.writeText(document.getElementById('wallet').textContent)">Copy wallet address</button></p>
 <p class="muted">Send USDT only on the TRON (TRC20) network. Check the asset and network in your wallet before confirming. Never share your seed phrase or private key.</p>
 </section>
+  <section id="statistics">
+<h2>Fundraising progress</h2>
+<div style="background:#f1f3f5;padding:18px;border-radius:12px">
+<p><b>Total collected:</b> <span id="total">0</span> USDT</p>
+<p><b>Number of contributions:</b> <span id="count">0</span></p>
+<p class="muted" id="updated">Loading statistics...</p>
+</div>
+</section>
 <section><h2>Transparency</h2>
 <p>Contributions are intended for my personal outstanding financial obligations. This is a personal appeal, not a registered charity. I will provide updates about the fundraiser and its use of funds.</p>
 </section>
 <footer>Only send funds if you understand the network and are comfortable making a voluntary contribution. Crypto transfers are generally irreversible.</footer>
+document.getElementById('count').textContent =
+      data.transactions || 0;
+
+    document.getElementById('updated').textContent =
+      'Last updated: ' + new Date().toLocaleString();
+  } catch (error) {
+    document.getElementById('updated').textContent =
+      'Statistics temporarily unavailable';
+  }
+}
+
+updateStats();
+setInterval(updateStats, 60000);
+</script>
 </main></body></html>
