@@ -26,6 +26,7 @@ jobs:
         env:
           TRONGRID_API_KEY: ${{ secrets.TRONGRID_API_KEY }}
           WALLET: TLDSVit53cs5xZyGc3BK1Dh5jeo6yKi96x
+          START_TIMESTAMP_MS: "1795462989000"
         run: |
           python - <<'PY'
           import os, json, urllib.request, urllib.parse
@@ -33,10 +34,10 @@ jobs:
 
           wallet = os.environ["WALLET"]
           api_key = os.environ["TRONGRID_API_KEY"]
-          
+          start_time = int(os.environ["START_TIMESTAMP_MS"])
+
           if not api_key.strip():
-            raise RuntimeError("TRONGRID_API_KEY is empty")
-          print("API key is present:", bool(api_key.strip()))
+              raise RuntimeError("TRONGRID_API_KEY is empty")
 
           contract = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
 
@@ -76,7 +77,13 @@ jobs:
               for tx in result.get("data", []):
                   if tx.get("to") != wallet:
                       continue
+
                   if tx.get("token_info", {}).get("address") != contract:
+                      continue
+
+                  timestamp = int(tx.get("block_timestamp", 0))
+
+                  if timestamp < start_time:
                       continue
 
                   event_id = (
@@ -84,13 +91,14 @@ jobs:
                       tx.get("from"),
                       tx.get("to"),
                       tx.get("value"),
-                      tx.get("block_timestamp")
+                      timestamp
                   )
 
                   if event_id in seen:
                       continue
 
                   seen.add(event_id)
+
                   total += Decimal(tx["value"]) / Decimal(10**6)
                   count += 1
 
@@ -105,6 +113,7 @@ jobs:
               "asset": "USDT",
               "network": "TRON",
               "wallet": wallet,
+              "start_timestamp_ms": start_time,
               "total_usdt": str(total),
               "transactions": count
           }
