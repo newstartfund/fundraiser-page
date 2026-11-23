@@ -35,15 +35,40 @@ section{margin-top:26px} footer{font-size:13px;color:#69717d;margin-top:26px}
 document.getElementById('count').textContent =
       data.transactions || 0;
 
+<script>
+async function updateStats() {
+  try {
+    const response = await fetch(
+      '/fundraiser-page/donations.json?t=' + Date.now()
+    );
+
+    if (!response.ok) {
+      throw new Error('HTTP ' + response.status);
+    }
+
+    const data = await response.json();
+
+    document.getElementById('total').textContent =
+      Number(data.total_usdt || 0).toFixed(2);
+
+    document.getElementById('count').textContent =
+      data.transactions || 0;
+
     document.getElementById('updated').textContent =
       'Last updated: ' + new Date().toLocaleString();
+
   } catch (error) {
     document.getElementById('updated').textContent =
-      'Statistics temporarily unavailable';
+      'Statistics temporarily unavailable: ' + error.message;
   }
 }
 
 updateStats();
 setInterval(updateStats, 60000);
+</script>
+</body>
+</html>
+
+    
 </script>
 </main></body></html>
