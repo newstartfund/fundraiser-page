@@ -1,0 +1,121 @@
+
+name: Update USDT donations
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fetch confirmed USDT transfers
+        env:
+          TRONGRID_API_KEY: ${{ secrets.TRONGRID_API_KEY }}
+          WALLET: TLDSVit53cs5xZyGc3BK1Dh5jeo6yKi96x
+        run: |
+          python - <<'PY'
+          import os, json, urllib.request, urllib.parse
+          from decimal import Decimal
+
+          wallet = os.environ["WALLET"]
+          api_key = os.environ["TRONGRID_API_KEY"]
+          contract = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
+
+          fingerprint = None
+          seen = set()
+          total = Decimal("0")
+          count = 0
+
+          for page in range(1000):
+              params = {
+                  "limit": 200,
+                  "only_confirmed": "true",
+                  "only_to": "true",
+                  "contract_address": contract
+              }
+
+              if fingerprint:
+                  params["fingerprint"] = fingerprint
+
+              url = (
+                  "https://api.trongrid.io/v1/accounts/"
+                  + wallet + "/transactions/trc20?"
+                  + urllib.parse.urlencode(params)
+              )
+
+              req = urllib.request.Request(
+                  url,
+                  headers={
+                      "TRON-PRO-API-KEY": api_key,
+                      "Accept": "application/json"
+                  }
+              )
+
+              with urllib.request.urlopen(req, timeout=30) as response:
+                  result = json.loads(response.read())
+
+              for tx in result.get("data", []):
+                  if tx.get("to") != wallet:
+                      continue
+                  if tx.get("token_info", {}).get("address") != contract:
+                      continue
+
+                  event_id = (
+                      tx.get("transaction_id"),
+                      tx.get("from"),
+                      tx.get("to"),
+                      tx.get("value"),
+                      tx.get("block_timestamp")
+                  )
+
+                  if event_id in seen:
+                      continue
+
+                  seen.add(event_id)
+                  total += Decimal(tx["value"]) / Decimal(10**6)
+                  count += 1
+
+              next_fingerprint = result.get("meta", {}).get("fingerprint")
+
+              if not next_fingerprint or next_fingerprint == fingerprint:
+                  break
+
+              fingerprint = next_fingerprint
+
+          output = {
+              "asset": "USDT",
+              "network": "TRON",
+              "wallet": wallet,
+              "total_usdt": str(total),
+              "transactions": count
+          }
+
+          with open("donations.json", "w") as f:
+              json.dump(output, f, indent=2)
+
+          print(json.dumps(output, indent=2))
+          PY
+
+      - name: Save updated total
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add donations.json
+          git diff --cached --quiet || (
+            git commit -m "Update USDT donation total" &&
+            git push
+          )
